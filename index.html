@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>MQTT即時溫濕度</title>
+  </head>
+  <body>
+    <h1>MQTT即時溫濕度</h1>
+    <p>
+      溫度：<span id="temp">??</span> &deg; <br>
+      濕度：<span id="hum">??</span> %
+    </p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+    $(function(){
+      const socket = io.connect('http://192.168.168.109:5438');
+      console.log(socket)
+      socket.on('mqtt', function (data) {
+        const json = JSON.parse(data.msg);
+        
+        $("#temp").html(json.Temperature);
+        $("#hum").html(json.humidity);
+      });
+    });
+    </script>
+  </body>
+</html>
