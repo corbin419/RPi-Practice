@@ -1,28 +1,108 @@
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>MQTT即時溫濕度</title>
   </head>
   <body>
     <h1>MQTT即時溫濕度</h1>
     <p>
-      溫度：<span id="temp">??</span> &deg; <br>
+      測量時間：<span id="time">??</span> <br />
+      溫度：<span id="temp">??</span> &deg;C <br />
       濕度：<span id="hum">??</span> %
     </p>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+    <div style="width: 400px; height: 400px">
+      <canvas id="canvasLine"></canvas>
+      <canvas id="canvasLine2"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
-    $(function(){
-      const socket = io.connect('http://192.168.168.109:5438');
-      console.log(socket)
-      socket.on('mqtt', function (data) {
-        const json = JSON.parse(data.msg);
-        
-        $("#temp").html(json.Temperature);
-        $("#hum").html(json.humidity);
+      // y 軸的顯示
+      var yAxis = [];
+      // 資料集合，之後只要更新這個就好了。
+      var datas = [];
+      var datas2 = [];
+      var ctx = document.getElementById("canvasLine").getContext("2d");
+      var lineChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: yAxis,
+          datasets: [
+            {
+              label: "測試資料",
+              data: datas,
+              backgroundColor: "rgba(0,148,255,0.6)",
+            },
+          ],
+        },
       });
-    });
+      var ctx2 = document.getElementById("canvasLine2").getContext("2d");
+      var lineChart2 = new Chart(ctx2, {
+        type: "line",
+        data: {
+          labels: yAxis,
+          datasets: [
+            {
+              label: "測試資料",
+              data: datas2,
+              backgroundColor: "rgba(0,148,255,0.6)",
+            },
+          ],
+        },
+      });
+
+      //時間格式
+      var timeFormat = "HH:mm:ss";
+
+      function appendData() {
+        //超過10 個，就把最早進來的刪掉
+        if (yAxis.length >= 10) {
+          yAxis.shift();
+          datas.shift();
+          datas2.shift();
+        }
+        axios({
+          method: "get",
+          baseURL: "http://192.168.168.109:8082", //back-end
+          headers: { "Content-Type": "application/json" },
+          timeout: 5000,
+        })
+          .then((response) => {
+            console.log(response);
+            document.getElementById("time").innerHTML =
+              response.data[0].Time;
+            document.getElementById("temp").innerHTML =
+              response.data[0].Temperature;
+            document.getElementById("hum").innerHTML =
+              response.data[0].humidity;
+            for (let i = 0; i < 10; i++) {
+              datas[9 - i] = response.data[i].Temperature;
+              datas2[9 - i] = response.data[i].humidity;
+              yAxis[9 - i] = response.data[i].Time;
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+
+        //推入y 軸新的資料
+        //yAxis.push(new moment().format(timeFormat));
+
+        //推入一筆亂數進資料
+        //datas.push(Math.floor(Math.random() * 100) + 1);
+        //datas2.push(Math.floor(Math.random() * 100) + 1);
+
+        //更新線圖
+        lineChart.update();
+        lineChart2.update();
+      }
+
+      //每秒做一次
+      setInterval(appendData, 1000);
     </script>
   </body>
 </html>
